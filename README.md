@@ -1,6 +1,6 @@
 # Mean-Variance-Portfolio-Optimization
 Languages Used: PostgreSQL, R
-Packages: ggplot2, foo, PortfolioAnalytics
+Packages: ggplot2, zoo, PortfolioAnalytics
 Tools Used: PostgreSQL, R-Studio, Microsoft Excel
 
 Project Summary:
