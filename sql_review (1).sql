@@ -159,24 +159,55 @@ FROM _temp_company_list;
 SELECT * FROM company_list LIMIT 10;
 SELECT COUNT(*) FROM company_list;
 
-/*
-******** RESTORE POINT stockmarket1
-In order to continue learning, you need to have all the previous steps completed
-If you would like to review later (and you need to know how to complete these steps).
-However, in the interest of time, I have created a backup of the current progress and 
-will now demonstrate how to restore it.
-
-IMPORTANT: remove the current database and recreate it to restore from backup
-DO NOT RESTORE THE BACKUP TO THE postgres database!
-*/
-
 -------------------------------------------------
--- YOUR TURN: Import NYSE and AMEX companies ----
+-- Import NYSE and AMEX companies ----
 -------------------------------------------------
 -- HINT: add rows with market names (NYSE and AMEX) to the stock_mkt table first
 -- HINT: truncate the _temp_company_list before each new import, otherwise you will create duplicates
 -- HINT: do now forget to manually change the market name with each import
 
+-- First, add the markets to the stock_mkt (otherwise you will get an integrity error)
+TRUNCATE TABLE public.stock_mkt; -- Fast delete all content (no restoring) but will not work if we have referential integrity
+DELETE FROM stock_mkt; -- The "normal" delete procedure
+-- But we have nothing to delete - we need to add data
+INSERT INTO stock_mkt (stock_mkt_name) VALUES ('AMEX');
+-- Check!
+SELECT * FROM stock_mkt;
+
+-- Next we will load the company_list with data stored in _temp_company_list
+-- Prepare
+SELECT symbol, 'AMEX' AS stock_mkt_name, name company_name, market_cap,country, ipo_year,sector, industry 
+FROM _temp_company_list;
+
+-- Insert with proper casting (type conversion)
+INSERT INTO company_list
+SELECT symbol, 'AMEX' AS stock_mkt_name, name company_name, market_cap::double precision ,country, ipo_year::integer, sector,industry 
+FROM _temp_company_list;
+-- Check
+SELECT * FROM company_list LIMIT 10;
+SELECT COUNT(*) FROM company_list;
+
+-- NYSE
+-- First, add the markets to the stock_mkt (otherwise you will get an integrity error)
+TRUNCATE TABLE public.stock_mkt; -- Fast delete all content (no restoring) but will not work if we have referential integrity
+DELETE FROM stock_mkt; -- The "normal" delete procedure
+-- But we have nothing to delete - we need to add data
+INSERT INTO stock_mkt (stock_mkt_name) VALUES ('NYSE');
+-- Check!
+SELECT * FROM stock_mkt;
+
+-- Next we will load the company_list with data stored in _temp_company_list
+-- Prepare
+SELECT symbol, 'NYSE' AS stock_mkt_name, name company_name, market_cap,country, ipo_year,sector, industry 
+FROM _temp_company_list;
+
+-- Insert with proper casting (type conversion)
+INSERT INTO company_list
+SELECT symbol, 'NYSE' AS stock_mkt_name, name company_name, market_cap::double precision ,country, ipo_year::integer, sector,industry 
+FROM _temp_company_list;
+-- Check
+SELECT * FROM company_list LIMIT 10;
+SELECT COUNT(*) FROM company_list;
 -----------------------------------------------------------------
 -- Dealing with unwanted values  and leading/trailing blanks ----
 -----------------------------------------------------------------
@@ -195,16 +226,56 @@ UPDATE company_list SET
 
 SELECT * FROM company_list LIMIT 10;
 
+-- HW1 --
+SELECT symbol, company_name FROM company_list WHERE stock_mkt_name = 'NASDAQ'
+AND symbol IN (
+    SELECT symbol
+    FROM company_list
+    WHERE stock_mkt_name = 'NYSE'
+)
+AND symbol IN (
+    SELECT symbol
+    FROM company_list
+    WHERE stock_mkt_name = 'AMEX'
+)
+ORDER BY symbol, company_name;
+-- OR
+SELECT symbol, company_name FROM company_list GROUP BY symbol, company_name HAVING COUNT (DISTINCT stock_mkt_name)>1;
+
+
+-- Q2
+SELECT country
+FROM company_list
+WHERE stock_mkt_name = 'NASDAQ'
+  AND country IN (
+    SELECT country
+    FROM company_list
+    WHERE stock_mkt_name = 'NYSE'
+  )
+  AND country IN (
+    SELECT country
+    FROM company_list
+    WHERE stock_mkt_name = 'AMEX'
+  )
+GROUP BY country
+ORDER BY country ASC;
+
+-- OR
+SELECT country FROM company_list GROUP BY country HAVING COUNT (DISTINCT stock_mkt_name)=3;
+SELECT * FROM company_list WHERE symbol = 'AFI';
+-- Q3
+SELECT sector, 
+COUNT(*) AS tickers,
+ROUND(MIN(market_cap/1000000)::numeric,2)AS min_cap_millions,
+ROUND(AVG(market_cap/1000000)::numeric,2)AS avg_cap_millions,
+ROUND(MAX(market_cap/1000000)::numeric,2)AS max_cap_millions
+FROM company_list
+WHERE stock_mkt_name = 'NASDAQ'
+GROUP BY sector
+ORDER BY sector ASC;
+
+
 -- Please install R and R Studio (see the appropriate appendix) before the next session.
-
-----------------------------------------------
------------------ End of Part a --------------
-----------------------------------------------
-
-
-----------------------------------------------
-------------- Beginning of Part b ------------
-----------------------------------------------
 
 ----------------------------------------------
 ----------------- Create a View --------------
@@ -296,17 +367,6 @@ ALTER TABLE public.eod_quotes_nasdaq_null_sector
     ADD CONSTRAINT eod_quotes_nasdaq_null_sector_pkey PRIMARY KEY (ticker, date);
 */
 
-/*
-******** RESTORE POINT stockmarket2
-In order to continue learning, you need to have all the previous steps completed
-If you would like to review later (and you need to know how to complete these steps).
-However, in the interest of time, I have created a backup of the current progress and 
-will now demonstrate how to restore it.
-
-IMPORTANT: remove the current database and recreate it to restore from backup
-DO NOT RESTORE THE BACKUP TO THE postgres database!
-*/
-
 ---------------------------------------------------
 ----------------- Anaylze the null sector ---------
 ---------------------------------------------------
@@ -347,8 +407,20 @@ HAVING MIN(date)=
 SELECT *, date_part('year',date) AS Y,date_part('month',date) AS M,date_part('day',date) AS D 
 FROM eod_quotes_nasdaq_null_sector;
 
--- YOUR TURN: How many dates are available for each ticker symbol?
--- YOUR TURN: What was the min, average, and maximum adj_close for each ticker in 2017?
+-- How many dates are available for each ticker symbol?
+SELECT ticker, COUNT(DISTINCT date) AS date_count
+FROM eod_quotes_nasdaq_null_sector GROUP BY ticker;
+--  What was the min, average, and maximum adj_close for each ticker in 2017?
+SELECT ticker, 
+    MIN(adj_close) AS min_adj_close, 
+    AVG(adj_close) AS avg_adj_close, 
+    MAX(adj_close) AS max_adj_close
+FROM 
+    eod_quotes_nasdaq_null_sector
+WHERE 
+    date BETWEEN '2017-01-01' AND '2017-12-31'
+GROUP BY 
+    ticker;
 
 --------------------------------------------
 ----------------- Review JOINS -------------
@@ -392,10 +464,9 @@ SELECT DISTINCT ticker FROM eod_quotes;
 -- https://www.postgresql.org/docs/10/static/functions-matching.html#FUNCTIONS-LIKE
 SELECT DISTINCT company_name
 FROM v_company_list 
-WHERE company_name LIKE '%Tech%'
+WHERE company_name LIKE '%Tech%';
 
--- YOUR TURN: Which company names end with 'Inc.'
-
-----------------------------------------------
------------------ End of Part  ---------------
-----------------------------------------------
+-- Which company names end with 'Inc.'
+SELECT DISTINCT company_name
+FROM v_company_list 
+WHERE company_name LIKE '%Inc.'
