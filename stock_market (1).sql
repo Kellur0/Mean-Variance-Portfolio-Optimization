@@ -1,7 +1,6 @@
 /*
- ISDS 570 Data Transformation for Business - Stock Market Case
- Dr. Kalczynski
-
+ Data Transformation for Business - Stock Market Case
+ 
  https://www.postgresql.org/docs/current/static/sql-expressions.html
  https://www.w3schools.com/SQL/
 
@@ -52,7 +51,7 @@ SELECT min(date),max(date) FROM v_eod_quotes_2016_2021;
 -- We have stock quotes but we could also use daily index data ----------
 -------------------------------------------------------------------------
 
--- Let's download 2016-2020 of SP500TR from Yahoo https://finance.yahoo.com/quote/%5ESP500TR/history?p=^SP500TR
+-- Let's download 2016-2021 of SP500TR from Yahoo https://finance.yahoo.com/quote/%5ESP500TR/history?p=^SP500TR
 
 -- An analysis of the CSV indicated that to make it compatible with eod
 -- - all unusual formatting has to be removed
@@ -209,25 +208,6 @@ WHERE custom_calendar_project.date = EOMI.date;
 -- CHECK
 SELECT * FROM custom_calendar_project ORDER BY date;
 SELECT * FROM custom_calendar_project WHERE eom=1 ORDER BY date;
-
---------------------------------
------ End of Part 3a -----------
---------------------------------
-
-/*
-******** RESTORE POINT stockmarket3
-In order to continue learning, you need to have all the previous steps completed
-If you would like to review later (and you need to know how to complete these steps).
-However, in the interest of time, I have created a backup of the current progress and 
-will now demonstrate how to restore it.
-
-IMPORTANT: remove the current database and recreate it to restore from backup
-DO NOT RESTORE THE BACKUP TO THE postgres database!
-*/
-
---------------------------------
------ Begin Part 3b -----------
---------------------------------
 
 ------------------------------------------------------------------
 -- We can now use the calendar to query prices and indexes -------
@@ -535,28 +515,3 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO stockmarketreader;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
    GRANT SELECT ON TABLES TO stockmarketreader;
    
-
-----------------------------------
--- For homework/projects  --------
-----------------------------------
-
-SELECT LEFT(symbol,1) letter,COUNT(*) as no_of_symbols
-FROM
-(SELECT DISTINCT symbol FROM mv_eod_2015_2020) S
-GROUP BY LEFT(symbol,1)
-ORDER BY letter;
-
---------------------------------
------ End of Part 3b -----------
---------------------------------
-
-/*
-******** RESTORE POINT stockmarket4
-In order to continue learning, you need to have all the previous steps completed
-If you would like to review later (and you need to know how to complete these steps).
-However, in the interest of time, I have created a backup of the current progress and 
-will now demonstrate how to restore it.
-
-IMPORTANT: remove the current database and recreate it to restore from backup
-DO NOT RESTORE THE BACKUP TO THE postgres database!
-*/
